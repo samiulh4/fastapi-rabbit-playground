@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from passlib.context import CryptContext
 from app.models import Message, User
 from app.database import user_collection
@@ -6,6 +7,14 @@ from app.database import messages_collection
 from pwdlib import PasswordHash
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/")
 async def read_root():

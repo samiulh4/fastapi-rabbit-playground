@@ -12,6 +12,7 @@ class User(BaseModel):
     country: Optional[str] = Field(default=None, max_length=3)
     is_active: bool = False
     is_verified: bool = False
+    is_online: bool = False
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -20,4 +21,11 @@ class Message(BaseModel):
     content: str
     is_active: bool = True
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))    
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+class LogoutRequest(BaseModel):
+    email: EmailStr  

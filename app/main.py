@@ -7,6 +7,7 @@ from app.database import user_collection
 from app.database import messages_collection
 from pwdlib import PasswordHash
 from fastapi.responses import JSONResponse
+from bson import ObjectId
 
 app = FastAPI()
 
@@ -131,10 +132,11 @@ async def get_online_users():
         )    
 
 
-@app.post('/message/create')
-async def create_message(message: Message):
-    message_dict = message.model_dump()
-    result = await messages_collection.insert_one(message_dict)
+@app.post('/message/send')
+async def message_send(message: Message):
+    message_dump = message.model_dump()
+    message_dump["sender_id"] = ObjectId(message_dump["sender_id"]) 
+    result = await messages_collection.insert_one(message_dump)
     return JSONResponse(
         status_code=200,
         content={
@@ -145,6 +147,41 @@ async def create_message(message: Message):
             }
         }
     )
+
+@app.get('/message/list')
+async def message_list():
+    cursor = messages_collection.aggregate([
+        {"$match": {"is_active": True}},
+        {"$lookup": {
+            "from": "users",
+            "localField": "sender_id",
+            "foreignField": "_id",
+            "as": "sender"
+        }},
+        {"$unwind": "$sender"},
+        {"$sort": {"_id": 1}}
+    ])
+
+    messages = []
+    
+    async for message in cursor:
+        messages.append({
+            "id": str(message["_id"]),
+            "sender_id": str(message["sender_id"]),
+            "sender_name": message["sender"].get("name"),
+            "sender_email": message["sender"].get("email"),
+            "content": message.get("content"),
+            "created_at": message.get("created_at").isoformat()
+        })
+
+    return JSONResponse(
+            status_code=200,
+            content={
+                "success": True,
+                "message": "Active messages list",
+                "data": messages
+            }
+        )
 
 def get_password_hash(password : str) -> str:
     password_hash = PasswordHash.recommended()

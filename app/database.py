@@ -8,5 +8,6 @@ db = client["mongo_rabbit_playground"]
 
 user_collection = db["users"]
 messages_collection = db["messages"]
+connections_collection = db["connections"]
 #notifications_collection = db["notifications"]
 #events_collection = db["events"]

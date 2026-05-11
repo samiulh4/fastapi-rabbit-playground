@@ -28,4 +28,12 @@ class LoginRequest(BaseModel):
     password: str
 
 class LogoutRequest(BaseModel):
-    email: EmailStr  
+    email: EmailStr
+
+# class ConnectionRequest(BaseModel):
+#     user_id: str
+#     connection_id: str
+#     status: str = "disconnected"
+#     ip_address: Optional[str] = None
+#     connected_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+#     disconnected_at: Optional[datetime] = None      

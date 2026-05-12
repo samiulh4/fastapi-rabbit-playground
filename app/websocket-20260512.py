@@ -4,35 +4,10 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from bson import ObjectId
 from app.database import user_collection, messages_collection, connections_collection
 from app.models import Message, ConnectionStore
-from app.rabbitmq import publish_message
 from user_agents import parse
 
-
-class ConnectionManager:
-    def __init__(self):
-        self.connections: list[dict] = []
-
-    def connect(self, websocket: WebSocket, user: str):
-        self.connections.append({"websocket": websocket, "user": user})
-
-    def disconnect(self, websocket: WebSocket):
-        self.connections[:] = [c for c in self.connections if c["websocket"] != websocket]
-
-    async def broadcast(self, sender_id: str, content: str):
-        dead = []
-        for conn in self.connections:
-            try:
-                await conn["websocket"].send_json({
-                    "sender_id": sender_id,
-                    "content": content,
-                })
-            except Exception:
-                dead.append(conn)
-        for d in dead:
-            self.connections.remove(d)
-
-
-manager = ConnectionManager()
+# Global connections list
+connections = []
 
 router = APIRouter(tags=["websocket"])
 
@@ -78,7 +53,10 @@ async def websocket_endpoint(websocket: WebSocket, user: str):
     conn_dict["user_id"] = ObjectId(user)
     await connections_collection.insert_one(conn_dict)
 
-    manager.connect(websocket, user)
+    connections.append({
+        "websocket": websocket,
+        "user": user
+    })
 
     try:
         while True:
@@ -90,11 +68,20 @@ async def websocket_endpoint(websocket: WebSocket, user: str):
             message_dict["connection_id"] = connection_id
             await messages_collection.insert_one(message_dict)
 
-            # Publish to RabbitMQ — the consumer will broadcast to all WebSocket clients
-            await publish_message(sender_id=user, content=data)
+            dead = []
+            for conn in connections:
+                try:
+                    await conn["websocket"].send_json({
+                        "sender_id": user,
+                        "content": data,
+                    })
+                except Exception:
+                    dead.append(conn)
+            for d in dead:
+                connections.remove(d)
 
     except WebSocketDisconnect:
-        manager.disconnect(websocket)
+        connections[:] = [c for c in connections if c["websocket"] != websocket]
         await connections_collection.update_one(
             {"connection_id": connection_id},
             {"$set": {"status": "disconnected", "disconnected_at": datetime.now(timezone.utc)}}
@@ -103,7 +90,7 @@ async def websocket_endpoint(websocket: WebSocket, user: str):
 
     except Exception as e:
         print(f"WebSocket error for {user}: {e}")
-        manager.disconnect(websocket)
+        connections[:] = [c for c in connections if c["websocket"] != websocket]
         await connections_collection.update_one(
             {"connection_id": connection_id},
             {"$set": {"status": "disconnected", "disconnected_at": datetime.now(timezone.utc)}}

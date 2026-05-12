@@ -19,6 +19,7 @@ class User(BaseModel):
 class Message(BaseModel):
     sender_id: str
     content: str
+    connection_id: Optional[str] = None
     is_active: bool = True
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -30,10 +31,14 @@ class LoginRequest(BaseModel):
 class LogoutRequest(BaseModel):
     email: EmailStr
 
-# class ConnectionRequest(BaseModel):
-#     user_id: str
-#     connection_id: str
-#     status: str = "disconnected"
-#     ip_address: Optional[str] = None
-#     connected_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-#     disconnected_at: Optional[datetime] = None      
+class ConnectionStore(BaseModel):
+    user_id: str
+    connection_id: str # Unique socket connection
+    session_id: Optional[str] = None # Which chat room/session
+    websocket_object_id: Optional[str] = None # For tracking actual WebSocket instance if needed
+    status: str = "disconnected"
+    client_ip: Optional[str] = None # Client/browser IP
+    server_ip: Optional[str] = None # Server IP 
+    user_agent: Optional[str] = None  # Browser/device information
+    connected_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    disconnected_at: Optional[datetime] = None      

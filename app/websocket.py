@@ -117,13 +117,16 @@ async def websocket_endpoint(websocket: WebSocket, user: str):
             {"$set": {"status": "disconnected", "disconnected_at": datetime.now(timezone.utc)}}
         )
         try:
-            await websocket.close(code=1011, reason="Internal server error")
+            
             await websocket.send_json({
                 "status_code": 1011,
                 "success": False,
                 "message": "Internal server error",
                 "data": []
             })
+            
+            await websocket.close(code=1011, reason="Internal server error")
+
         except Exception:
             await websocket.send_json({
                 "status_code": 1011,

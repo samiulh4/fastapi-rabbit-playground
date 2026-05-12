@@ -36,6 +36,9 @@ six==1.17.0
 starlette==1.0.0
 typing-inspection==0.4.2
 typing_extensions==4.15.0
+ua-parser==1.0.2
+ua-parser-builtins==202605
+user-agents==2.2.0
 uvicorn==0.46.0
 watchfiles==1.1.1
 websockets==16.0

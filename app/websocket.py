@@ -18,14 +18,11 @@ class ConnectionManager:
     def disconnect(self, websocket: WebSocket):
         self.connections[:] = [c for c in self.connections if c["websocket"] != websocket]
 
-    async def broadcast(self, sender_id: str, content: str):
+    async def broadcast(self, payload: dict):
         dead = []
         for conn in self.connections:
             try:
-                await conn["websocket"].send_json({
-                    "sender_id": sender_id,
-                    "content": content,
-                })
+                await conn["websocket"].send_json(payload)
             except Exception:
                 dead.append(conn)
         for d in dead:
@@ -88,10 +85,21 @@ async def websocket_endpoint(websocket: WebSocket, user: str):
             message_dict = message.model_dump()
             message_dict["sender_id"] = ObjectId(user)
             message_dict["connection_id"] = connection_id
-            await messages_collection.insert_one(message_dict)
+            result = await messages_collection.insert_one(message_dict)
+
+            # Build the same payload format as the message list endpoint
+            payload = {
+                "id": str(result.inserted_id),
+                "content": data,
+                "connection_id": connection_id,
+                "created_at": message.created_at.isoformat(),
+                "sender_id": user,
+                "sender_name": existing_user.get("name"),
+                "sender_email": existing_user.get("email"),
+            }
 
             # Publish to RabbitMQ — the consumer will broadcast to all WebSocket clients
-            await publish_message(sender_id=user, content=data)
+            await publish_message(payload)
 
     except WebSocketDisconnect:
         manager.disconnect(websocket)

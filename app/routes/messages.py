@@ -41,11 +41,12 @@ async def message_list():
     async for message in cursor:
         messages.append({
             "id": str(message["_id"]),
+            "content": message.get("content"),
+            "connection_id": message.get("connection_id"),
+            "created_at": message.get("created_at").isoformat(),
             "sender_id": str(message["sender_id"]),
             "sender_name": message["sender"].get("name"),
-            "sender_email": message["sender"].get("email"),
-            "content": message.get("content"),
-            "created_at": message.get("created_at").isoformat()
+            "sender_email": message["sender"].get("email")
         })
 
     return JSONResponse(
